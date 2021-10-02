@@ -1,0 +1,7 @@
+tableName: "Shortener"
+apiDomain: "api.yourdomain.com"
+frontendDomain: "yourdomain.com"
+allowedEmailDomain: "usfca.edu"
+userPoolId: "existing user pool id"
+userPoolARNs:
+  - "existing user pool arn"

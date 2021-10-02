@@ -1,0 +1,168 @@
+service: shortener
+frameworkVersion: '2'
+configValidationMode: warn
+
+provider:
+  stage: dev
+  region: us-east-1
+  endpointType: regional
+  name: aws
+  runtime: nodejs12.x
+  lambdaHashingVersion: 20201221
+  environment:
+    DYNAMODB_TABLE: ${self:custom.config.tableName}
+    ALLOWED_DOMAIN: ${self:custom.config.allowedEmailDomain}
+    BOUND_DOMAIN: ${self:custom.customDomain.domainName}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:DeleteItem
+          Resource:
+            Fn::GetAtt:
+              - ShortenerDynamoDBTable
+              - Arn
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+          # extremely friendly CloudFormation syntax
+          Resource:
+            - { "Fn::Join": [ "/", [
+                { "Fn::GetAtt": ["ShortenerDynamoDBTable", "Arn" ] }, "index", "userId-createdAt-index"
+              ]]}
+
+resources:
+  Resources:
+    ShortenerDynamoDBTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: shortStr
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: N
+        KeySchema:
+          - AttributeName: shortStr
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: "userId-createdAt-index"
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: 'ALL'
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
+    ShortenerUserPoolClient:
+      Type: "AWS::Cognito::UserPoolClient"
+      Properties:
+        ClientName: shortener
+        GenerateSecret: false
+        AllowedOAuthFlows:
+          - implicit
+        AllowedOAuthScopes:
+          - phone
+          - email
+          - openid
+          - profile
+        CallbackURLs:
+          - "https://${self:custom.config.frontendDomain}/"
+        UserPoolId: ${self:custom.config.userPoolId}
+    GatewayAuthorizer:
+      DependsOn:
+        - ApiGatewayRestApi
+      Type: "AWS::ApiGateway::Authorizer"
+      Properties:
+        Name: shortener-authorizer
+        IdentitySource: method.request.header.Authorization
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        Type: COGNITO_USER_POOLS
+        ProviderARNs: ${self:custom.config.userPoolARNs}
+
+functions:
+  debug:
+    handler:
+      - middleware.auth
+      - handler.debug
+    events:
+      - http:
+          path: /
+          method: PATCH
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: GatewayAuthorizer
+  create:
+    handler:
+      - middleware.auth
+      - handler.create
+    events:
+      - http:
+          path: /
+          method: POST
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: GatewayAuthorizer
+  list:
+    handler:
+      - middleware.auth
+      - handler.list
+    events:
+      - http:
+          path: /
+          method: GET
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: GatewayAuthorizer
+  redirect:
+    handler: handler.redirect
+    events:
+      - http:
+          path: /{short}
+          method: GET
+  delete:
+    handler:
+      - middleware.auth
+      - handler.delete
+    events:
+      - http:
+          path: /{short}
+          method: DELETE
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: GatewayAuthorizer
+
+plugins:
+    - serverless-prune-plugin
+    - serverless-domain-manager
+    - serverless-middleware
+
+custom:
+  prune:
+    automatic: true
+    number: 2
+  customDomain:
+    stage: ${self:provider.stage}
+    domainName: ${self:custom.config.apiDomain}
+    certificateName: ${self:custom.config.apiDomain}
+    createRoute53Record: true
+    endpointType: ${self:provider.endpointType}
+    apiType: rest
+    securityPolicy: tls_1_2
+  config: ${file(./config.yml)}
