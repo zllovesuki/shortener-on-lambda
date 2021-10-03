@@ -2,7 +2,9 @@ module.exports.new = (success, statusCode, err_or_res) => {
     const resp = {
         statusCode: statusCode,
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Credentials': true,
         },
     }
     const body = {

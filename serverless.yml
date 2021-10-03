@@ -87,6 +87,19 @@ resources:
           Ref: ApiGatewayRestApi
         Type: COGNITO_USER_POOLS
         ProviderARNs: ${self:custom.config.userPoolARNs}
+    GatewayResponseDefault4XX:
+      Type: "AWS::ApiGateway::GatewayResponse"
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: ApiGatewayRestApi
+
+package:
+  exclude:
+    - frontend/**
 
 functions:
   debug:
@@ -98,6 +111,12 @@ functions:
           path: /
           method: PATCH
           cors: true
+          # cors:
+          #   origin: 'http://localhost:8080'
+          #   headers:
+          #     - Content-Type
+          #     - Authorization
+          #   allowCredentials: true
           authorizer:
             type: COGNITO_USER_POOLS
             authorizerId:
@@ -111,6 +130,12 @@ functions:
           path: /
           method: POST
           cors: true
+          # cors:
+          #   origin: 'http://localhost:8080'
+          #   headers:
+          #     - Content-Type
+          #     - Authorization
+          #   allowCredentials: true
           authorizer:
             type: COGNITO_USER_POOLS
             authorizerId:
@@ -124,6 +149,12 @@ functions:
           path: /
           method: GET
           cors: true
+          # cors:
+          #   origin: 'http://localhost:8080'
+          #   headers:
+          #     - Content-Type
+          #     - Authorization
+          #   allowCredentials: true
           authorizer:
             type: COGNITO_USER_POOLS
             authorizerId:

@@ -75,7 +75,8 @@ module.exports.create = async (evt, ctx) => {
 
     try {
         await ddb.put(params).promise()
-        return resp.new(true, 200, `https://${WHERE}/${params.Item.shortStr}`)
+        delete params.Item.userId
+        return resp.new(true, 200, params.Item)
     } catch(e) {
         return resp.new(false, 500, `Unable to create short URL: ${e.message}`)
     }
@@ -98,6 +99,7 @@ module.exports.list = async (evt, ctx) => {
             ":v_user": ctx.prev,
             ":v_ts": ts
         },
+        ScanIndexForward: false,
         ProjectionExpression: "shortStr, longURL, createdAt",
         Limit: 10
     }
