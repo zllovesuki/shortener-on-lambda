@@ -4,6 +4,10 @@ This repo hosts the the source code for the frontend in vuejs, and the backend p
 
 The project was an exercise in patience of reading Amazon documentation, and learning how to use AWS services.
 
+## Accompanied Presentations
+
+[https://docs.google.com/presentation/d/2-2pEUwt0WL1dRdpiEo39qLgxFmaRFoYJt2_3osqdnAw/edit?usp=sharing](https://docs.google.com/presentation/d/1-2pEUwt0WL1dRdpiEo39qLgxFmaRFoYJt2_3osqdnAw/edit?usp=sharing)
+
 ## How to deploy
 
 It is recommended to have the domain of your choice hosted on Route 53.
